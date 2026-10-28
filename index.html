@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jon Stewart Monologues</title>
+<meta name="description" content="Every Jon Stewart Monday monologue from The Daily Show, newest first, refreshed hourly.">
+<link rel="canonical" href="https://lysak.github.io/jon-stewart-monologue/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lysak.github.io/jon-stewart-monologue/">
+<meta property="og:title" content="Jon Stewart Monologues">
+<meta property="og:description" content="Every Jon Stewart Monday monologue from The Daily Show, newest first, refreshed hourly.">
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Newsreader: a text face drawn for reading news on screens; this is an archive of a news show. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+<script>
+  // Set the theme before first paint so a saved choice never flashes the other theme.
+  try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+</script>
+<style>
+  /* Warm paper and ink: an archive ledger, not a dashboard. One accent (brick) marks the newest entry and focus. */
+  :root {
+    --bg: #f6f4ef; --fg: #1c1b19; --muted: #5f5b53; --line: #dcd7cb; --accent: #a1301f;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] { --bg: #161513; --fg: #e9e5dc; --muted: #a39d92; --line: #2e2b27; --accent: #e3846b; color-scheme: dark; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #161513; --fg: #e9e5dc; --muted: #a39d92; --line: #2e2b27; --accent: #e3846b; color-scheme: dark; }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0 auto; max-width: 54rem; padding: 0 16px;
+    background: var(--bg); color: var(--fg);
+    font: 1.0625rem/1.45 Newsreader, Charter, "Iowan Old Style", Georgia, serif;
+    font-variant-numeric: tabular-nums;
+  }
+  a { color: inherit; text-decoration: none; }
+  a, button, summary { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 40px 0 8px; }
+  .actions { display: flex; gap: 8px; flex-shrink: 0; }
+  /* A link styled as a button: one 42px line (44px minus the border) centres its text exactly like <button> does. */
+  a.btn { display: inline-block; line-height: 42px; }
+  /* 1em mark centred on Newsreader's cap height (~0.74em): (0.74 - 1) / 2 ≈ -0.125em. Same rule in header and footer. */
+  .gh { width: 1em; height: 1em; margin-right: .4em; vertical-align: -.125em; }
+  h1 { margin: 0; font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 500; letter-spacing: -.01em; line-height: 1.1; }
+  #summary { margin: 0 0 32px; color: var(--muted); }
+
+  .btn {
+    flex-shrink: 0; min-height: 44px; padding: 0 14px;
+    font: inherit; font-size: .9375rem; color: var(--fg);
+    background: transparent; border: 1px solid var(--line); border-radius: 4px;
+  }
+  .btn:hover { border-color: var(--muted); }
+  .btn:active { background: var(--line); }
+
+  /* The one focal point: the newest monologue gets a frame; everything after it is a smaller row. */
+  .latest { display: grid; gap: 16px; padding-bottom: 32px; margin-bottom: 8px; border-bottom: 1px solid var(--fg); }
+  .latest img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; background: var(--line); }
+  .latest .when { margin: 0; color: var(--accent); font-size: .9375rem; }
+  .latest h2 { margin: 4px 0 8px; font-size: clamp(1.375rem, 3.4vw, 1.75rem); font-weight: 500; line-height: 1.2; }
+  .latest h2 a:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+  .latest .meta { margin: 0; color: var(--muted); }
+  @media (min-width: 720px) { .latest { grid-template-columns: 1.15fr 1fr; align-items: center; gap: 28px; } }
+
+  /* Identity motif: the year sits in the margin like a ledger tab, and stays put while its rows scroll by. */
+  .year { display: grid; padding-top: 24px; }
+  .year > * { min-width: 0; } /* let the month strip scroll instead of widening the page on phones */
+  .year h2 { margin: 0 0 8px; font-size: 1.5rem; font-weight: 400; color: var(--muted); }
+  .year h2 small { font-size: .9375rem; margin-left: 8px; }
+  /* Month index under the year: tap to jump; the link's hash makes a shareable URL. */
+  .months { display: flex; gap: 4px; overflow-x: auto; margin: 0 0 8px; padding: 0; list-style: none; }
+  .months a { display: block; min-width: 44px; min-height: 44px; padding: 4px 8px; color: var(--muted); text-align: center; line-height: 1.2; border-radius: 4px; }
+  .months a { white-space: nowrap; }
+  .months a small { margin-left: 4px; font-size: .8125rem; }
+  .months a:hover { color: var(--fg); }
+  .months a[aria-current] { color: var(--accent); }
+  .month { scroll-margin-top: 16px; }
+  .year h2 a:hover { color: var(--fg); }
+  .month h3 { margin: 16px 0 4px; font-size: .9375rem; font-weight: 500; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+  .month:first-child h3 { margin-top: 0; }
+  @media (min-width: 720px) {
+    .year { grid-template-columns: 7rem 1fr; }
+    .year aside { position: sticky; top: 16px; align-self: start; max-height: calc(100vh - 32px); overflow-y: auto; }
+    .year h2 { font-size: 2rem; line-height: 1.6; }
+    .year h2 small { display: block; margin: 0; line-height: 1.2; }
+    .months { flex-direction: column; overflow-x: visible; margin-top: 12px; }
+    .months a { text-align: left; padding: 4px 0; }
+  }
+  ol { list-style: none; margin: 0; padding: 0; }
+  /* A frame per row: monologues are easier to recognise by Jon's cold open than by a headline. */
+  .row {
+    display: grid; grid-template-columns: 11rem 1fr; gap: 16px; align-items: start;
+    padding: 14px 0; border-top: 1px solid var(--line);
+  }
+  .row img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; background: var(--line); }
+  .row .title { display: block; line-height: 1.3; }
+  .row .meta { display: block; margin-top: 6px; color: var(--muted); font-size: .9375rem; }
+  .row:hover .title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+  .row:hover img { filter: brightness(1.08); }
+  .row:active .title { color: var(--accent); }
+  @media (max-width: 520px) {
+    .row { grid-template-columns: 7.5rem 1fr; gap: 12px; padding: 12px 0; }
+    .row .title { font-size: 1rem; }
+  }
+
+  #summary .btn { margin-left: 8px; }
+  /* One corner button: at the top it jumps to the bottom, anywhere else back to the top. */
+  /* An SVG arrow, not a glyph: a font's arrow sits off its box's centre. */
+  #jump { position: fixed; right: 16px; bottom: 16px; width: 44px; padding: 0; background: var(--bg); display: grid; place-items: center; }
+  #jump.down svg { transform: rotate(180deg); }
+
+  details { margin: 48px 0 0; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
+  summary { min-height: 44px; display: flex; align-items: center; }
+  details code { font-size: .875rem; }
+
+  footer { margin: 48px 0 0; padding: 16px 0 80px; /* room for #jump at full scroll */ border-top: 1px solid var(--line); color: var(--muted); font-size: .9375rem; }
+  footer p { margin: 0 0 4px; }
+  footer a { text-decoration: underline; text-underline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="gh" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></symbol></svg>
+<header>
+  <h1>Jon Stewart Monologues</h1>
+  <div class="actions">
+    <a class="btn" href="https://github.com/Lysak/jon-stewart-monologue" target="_blank" rel="noopener"><svg class="gh" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><use href="#gh"/></svg>GitHub</a>
+    <button class="btn" id="theme" type="button"></button>
+  </div>
+</header>
+<main>
+  <p id="summary" aria-live="polite">Loading monologues…</p>
+  <div id="list"></div>
+  <details id="review" hidden>
+    <summary id="review-summary">Needs review</summary>
+    <p>No "TDS Welcome" chapter, but it might still be a monologue. Add its id to <a href="https://github.com/Lysak/jon-stewart-monologue/blob/main/data/overrides.json" target="_blank" rel="noopener"><code>data/overrides.json</code></a> under <code>include</code> or <code>exclude</code>.</p>
+    <ol id="candidates"></ol>
+  </details>
+</main>
+<footer>
+  <p>Jon Stewart's Monday openers from <a href="https://www.youtube.com/@TheDailyShow" target="_blank" rel="noopener">The Daily Show on YouTube</a>. The list refreshes hourly.</p>
+  <p>Coded by <a href="https://lysak.github.io/" target="_blank" rel="noopener">Dmytrii Lysak</a> · <a href="https://github.com/Lysak/jon-stewart-monologue" target="_blank" rel="noopener"><svg class="gh" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><use href="#gh"/></svg>Source on GitHub</a></p>
+  <p id="updated"></p>
+</footer>
+<button class="btn" id="jump" type="button"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<script>
+const $ = id => document.getElementById(id);
+const el = (tag, props = {}, ...children) => { const e = Object.assign(document.createElement(tag), props); e.append(...children); return e; };
+// Dates in the show's own time zone, so a Monday night upload reads as Monday.
+const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "America/New_York" });
+const full = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "America/New_York" });
+const month = new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric", timeZone: "America/New_York" });
+const year = iso => new Intl.DateTimeFormat("en", { year: "numeric", timeZone: "America/New_York" }).format(new Date(iso));
+// "2026-10": the month's anchor id and its number.
+const ym = iso => new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", timeZone: "America/New_York" }).format(new Date(iso));
+const monthName = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" });
+// UTC: one unambiguous time for every reader.
+const stamp = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short" });
+const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+const watch = id => `https://www.youtube.com/watch?v=${id}`;
+const out = { target: "_blank", rel: "noopener" };
+// Every upload ends with the channel name; it is noise in a list that is all one show.
+const name = title => title.replace(/\s*\|\s*The Daily Show\s*$/i, "");
+
+function row(v, showId) {
+  // mqdefault is a true 16:9 frame at 320x180: sharp at 2x for an 11rem column, ~15 KB, lazy below the fold.
+  const img = el("img", { src: `https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`, alt: "", width: 320, height: 180, loading: "lazy", decoding: "async" });
+  return el("li", {}, el("a", { className: "row", href: watch(v.id), ...out }, img,
+    el("span", {},
+      el("span", { className: "title", textContent: name(v.title) }),
+      el("span", { className: "meta" }, el("time", { dateTime: v.published, textContent: day.format(new Date(v.published)) }), ` · ${fmt(v.duration)}`, showId ? ` · ${v.id}` : ""),
+    ),
+  ));
+}
+
+function latest(v) {
+  const img = el("img", { src: `https://i.ytimg.com/vi/${v.id}/hq720.jpg`, alt: "", width: 1280, height: 720, fetchPriority: "high" });
+  img.onerror = () => { img.onerror = null; img.src = `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`; };
+  return el("section", { className: "latest", ariaLabel: "Latest monologue" },
+    el("a", { href: watch(v.id), ...out, tabIndex: -1, ariaHidden: "true" }, img),
+    el("div", {},
+      el("p", { className: "when" }, "Latest · ", el("time", { dateTime: v.published, textContent: full.format(new Date(v.published)) })),
+      el("h2", {}, el("a", { href: watch(v.id), ...out, textContent: name(v.title) })),
+      el("p", { className: "meta", textContent: `${fmt(v.duration)} on YouTube` }),
+    ),
+  );
+}
+
+function render(all) {
+  const mono = all.filter(v => v.status === "monologue");
+  const cand = all.filter(v => v.status === "candidate");
+  if (!mono.length) {
+    $("summary").textContent = "No monologues yet. The list fills in after the first hourly update.";
+  } else {
+    const range = `${month.format(new Date(mono.at(-1).published))} to ${month.format(new Date(mono[0].published))}`;
+    $("summary").textContent = `${mono.length} monologues, ${range}. Newest first.`;
+    const years = Map.groupBy(mono, v => year(v.published));
+    $("list").replaceChildren(latest(mono[0]), ...[...years].map(([y, vs]) => {
+      const months = [...Map.groupBy(vs.filter(v => v !== mono[0]), v => ym(v.published))];
+      const label = m => monthName.format(new Date(`${m}-01T12:00Z`));
+      const section = el("section", { className: "year", id: y },
+        el("aside", {},
+          el("h2", { id: `y${y}` }, el("a", { href: `#${y}`, textContent: y }), el("small", { textContent: `${vs.length} monologues` })),
+          el("nav", { ariaLabel: `Months of ${y}` }, el("ol", { className: "months" }, ...months.map(([m]) =>
+            el("li", {}, el("a", { href: `#${m}` }, label(m).slice(0, 3), el("small", { textContent: `#${+m.slice(5)}` })))))),
+        ),
+        el("div", {}, ...months.map(([m, ms]) =>
+          el("section", { className: "month", id: m }, el("h3", { textContent: label(m) }), el("ol", {}, ...ms.map(v => row(v)))))),
+      );
+      section.setAttribute("aria-labelledby", `y${y}`);
+      return section;
+    }));
+    // The list renders after load, so the browser's own jump to #2026-10 has nothing to land on yet.
+    document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
+    markMonth();
+  }
+  $("review").hidden = !cand.length;
+  $("review-summary").textContent = `Needs review (${cand.length})`;
+  $("candidates").replaceChildren(...cand.map(v => row(v, true)));
+}
+
+// Highlight, in the margin index, the month whose rows are at the top of the screen.
+function markMonth() {
+  const months = [...document.querySelectorAll(".month")];
+  const current = months.findLast(m => m.getBoundingClientRect().top <= 80) || months[0];
+  for (const a of document.querySelectorAll(".months a")) {
+    if (a.hash === `#${current?.id}`) a.setAttribute("aria-current", "location"); else a.removeAttribute("aria-current");
+  }
+}
+// Within the first screen the button offers the bottom; past it, the way back up.
+const atTop = () => scrollY < innerHeight;
+function markJump() {
+  $("jump").classList.toggle("down", atTop());
+  $("jump").ariaLabel = atTop() ? "Jump to the bottom" : "Back to the top";
+}
+$("jump").onclick = () => scrollTo(0, atTop() ? document.documentElement.scrollHeight : 0);
+addEventListener("scroll", () => requestAnimationFrame(() => { markMonth(); markJump(); }), { passive: true });
+markJump();
+
+function load() {
+  $("summary").textContent = "Loading monologues…";
+  fetch("data/videos.json", { cache: "no-cache" })
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const modified = r.headers.get("last-modified");
+      $("updated").textContent = modified ? `List last changed ${stamp.format(new Date(modified))}.` : "";
+      return r.json();
+    })
+    .then(render)
+    .catch(e => {
+      $("summary").replaceChildren(`Could not load the list (${e.message}).`, el("button", { className: "btn", type: "button", textContent: "Try again", onclick: load }));
+    });
+}
+
+const dark = () => (document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+const themeLabel = () => { $("theme").textContent = dark() ? "Light theme" : "Dark theme"; };
+$("theme").onclick = () => {
+  const next = dark() ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("theme", next); } catch {}
+  themeLabel();
+};
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeLabel);
+themeLabel();
+load();
+</script>
+</body>
+</html>

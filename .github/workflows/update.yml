@@ -1,0 +1,76 @@
+name: Update monologues
+
+on:
+  schedule:
+    - cron: "17 * * * *" # hourly; off the top of the hour, when GitHub's scheduler is busiest
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.x" # latest stable
+      - run: python3 -m unittest discover -s tests
+      - run: python3 scripts/update.py
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - id: commit
+        run: |
+          git add data
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Update videos"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      # One open issue while videos wait in "Needs review"; it closes itself once overrides settle them.
+      # ponytail: a candidate that appears while the issue is open is not added to it; it shows on the page.
+      - name: Flag videos that need review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          list=$(jq -r '.[] | select(.status == "candidate") | "- [\(.title)](https://www.youtube.com/watch?v=\(.id)) `\(.id)`"' data/videos.json)
+          open=$(gh issue list --label needs-review --state open --json number --jq '.[].number')
+          if [ -z "$list" ]; then
+            for n in $open; do gh issue close "$n" --comment "All settled."; done
+          elif [ -z "$open" ]; then
+            gh label create needs-review --color d93f0b 2>/dev/null || true
+            printf '@%s these videos have no "TDS Welcome" chapter and Clef is unsure:\n\n%s\n\nAdd each id to `data/overrides.json` under `include` or `exclude`. This issue closes on the next run once none are left.\n' \
+              "$OWNER" "$list" > body.md
+            gh issue create --title "Needs review: $(echo "$list" | wc -l | tr -d ' ') videos" --label needs-review --body-file body.md
+          fi
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: .
+
+  deploy:
+    needs: update
+    if: needs.update.outputs.changed == 'true' || github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5
