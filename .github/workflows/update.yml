@@ -17,28 +17,42 @@ jobs:
     permissions:
       contents: write
       issues: write
-    outputs:
-      changed: ${{ steps.commit.outputs.changed }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.x" # latest stable
+      # videos.json, clef.json and last-changed.txt are generated state: they live on the `data` branch, so main stays human-only.
+      - name: Restore state from the data branch
+        run: |
+          if git fetch --quiet origin "+refs/heads/data:refs/remotes/origin/data"; then
+            git checkout refs/remotes/origin/data -- data/videos.json data/clef.json data/last-changed.txt
+            echo "Restored state from the data branch."
+          else
+            echo "No data branch yet; starting from scratch."
+          fi
       - run: python3 -m unittest discover -s tests
       - run: python3 scripts/update.py
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - id: commit
+      - name: Save state to the data branch
         run: |
-          git add data
-          if git diff --cached --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          state="$RUNNER_TEMP/state"
+          if git rev-parse --verify --quiet refs/remotes/origin/data >/dev/null; then
+            git branch --force data refs/remotes/origin/data
+            git worktree add --quiet "$state" data
           else
-            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Update videos"
-            git push
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git worktree add --quiet --detach "$state"
+            git -C "$state" switch --quiet --orphan data
+          fi
+          mkdir -p "$state/data"
+          cp data/videos.json data/clef.json data/last-changed.txt "$state/data/"
+          git -C "$state" add data
+          if ! git -C "$state" diff --cached --quiet; then
+            git -C "$state" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit --quiet -m "Update videos"
+            git -C "$state" push --quiet origin data
           fi
       # One open issue while videos wait in "Needs review"; it closes itself once overrides settle them.
       # ponytail: a candidate that appears while the issue is open is not added to it; it shows on the page.
@@ -63,7 +77,6 @@ jobs:
 
   deploy:
     needs: update
-    if: needs.update.outputs.changed == 'true' || github.event_name != 'schedule'
     runs-on: ubuntu-latest
     permissions:
       pages: write
