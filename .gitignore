@@ -1,2 +1,9 @@
 .env
+.idea
+.playwright-mcp
 __pycache__/
+# Generated state, kept on the `data` branch by the workflow so main stays human-only.
+data/videos.json
+data/clef.json
+data/last-changed.txt
+data/status.json

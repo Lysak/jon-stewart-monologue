@@ -6,7 +6,7 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -17,6 +17,10 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "videos.json"
 OVERRIDES = ROOT / "data" / "overrides.json"
 CLEF_CACHE = ROOT / "data" / "clef.json"
+# When the rendered list itself last moved; committed with the state so it survives runs.
+LAST_CHANGED = ROOT / "data" / "last-changed.txt"
+# Both timestamps for the page; written every run but never committed (it would churn the data branch hourly).
+STATUS = ROOT / "data" / "status.json"
 
 # Measured Oct 2026: 93 of 95 monologues went up in the evening slot; there marker-less monologues scored >= 0.81
 # and the 89 rejects (interviews at 23:30) <= 0.13. Outside it archive re-uploads score up to 0.8, so a human decides.
@@ -132,8 +136,9 @@ def classify(video_id, title, description, duration, overrides, p_monologue=None
 
 def main():
     overrides = json.loads(OVERRIDES.read_text())
-    clef = json.loads(CLEF_CACHE.read_text())
-    stored = [v["id"] for v in json.loads(DATA.read_text())]
+    # The generated files live on the `data` branch, so a fresh clone has neither.
+    clef = json.loads(CLEF_CACHE.read_text()) if CLEF_CACHE.exists() else {}
+    stored = [v["id"] for v in json.loads(DATA.read_text())] if DATA.exists() else []
     # Re-fetching stored ids keeps metadata fresh (YouTube ToS: refresh within 30 days) and drops deleted videos.
     ids = playlist_ids(STEWART_PLAYLIST, 40) + playlist_ids(UPLOADS_PLAYLIST, 1) + overrides["include"] + stored
     out = []
@@ -154,8 +159,15 @@ def main():
         if status:
             out.append({"id": v["id"], "title": sn["title"], "published": sn["publishedAt"], "duration": duration, "status": status})
     out.sort(key=lambda v: v["published"], reverse=True)
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    # "List last changed" only moves when the list itself moves; a metadata refresh alone does not count.
+    previous = json.loads(DATA.read_text()) if DATA.exists() else None
+    if previous != out:
+        LAST_CHANGED.write_text(now + "\n")
+    changed = LAST_CHANGED.read_text().strip() if LAST_CHANGED.exists() else now
     DATA.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n")
     CLEF_CACHE.write_text(json.dumps(clef, indent=1, sort_keys=True) + "\n")
+    STATUS.write_text(json.dumps({"changed": changed, "updated": now}, indent=1) + "\n")
     print(f"{sum(v['status'] == 'monologue' for v in out)} monologues, {sum(v['status'] == 'candidate' for v in out)} candidates")
 
 

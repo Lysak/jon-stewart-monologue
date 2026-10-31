@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://lysak.github.io/jon-stewart-monologue/sitemap.xml
