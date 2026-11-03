@@ -12,8 +12,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  update:
+  # GitHub publishes runner labels before `ubuntu-latest` migrates to them. Pick the newest
+  # Ubuntu LTS from that list every run: today 26.04, and 28.04 the moment it is available.
+  # No hardcoded version means nothing can go stale.
+  runner:
     runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.pick.outputs.label }}
+    steps:
+      - id: pick
+        run: |
+          label=$(curl -fsSL --max-time 20 https://raw.githubusercontent.com/actions/runner-images/main/README.md \
+            | grep -oE '`ubuntu-[0-9]{2}\.[0-9]{2}`' | tr -d '`' | sort -V | tail -1) || true
+          echo "label=${label:-ubuntu-latest}" >> "$GITHUB_OUTPUT"
+          echo "Using ${label:-ubuntu-latest}"
+
+  update:
+    needs: runner
+    runs-on: ${{ needs.runner.outputs.label }}
     permissions:
       contents: write
       issues: write
@@ -87,9 +103,9 @@ jobs:
           path: .
 
   deploy:
-    needs: update
+    needs: [runner, update]
     if: needs.update.outputs.changed == 'true' || github.event_name != 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ${{ needs.runner.outputs.label }}
     permissions:
       pages: write
       id-token: write
