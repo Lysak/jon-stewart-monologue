@@ -17,9 +17,9 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "videos.json"
 OVERRIDES = ROOT / "data" / "overrides.json"
 CLEF_CACHE = ROOT / "data" / "clef.json"
-# When the rendered list itself last moved; committed with the state so it survives runs.
+# When a monologue last joined (or left) the rendered list; committed with the state so it survives runs.
 LAST_CHANGED = ROOT / "data" / "last-changed.txt"
-# Both timestamps for the page; written every run but never committed (it would churn the data branch hourly).
+# The list timestamp and the last check time; written every run but never committed (it would churn the data branch hourly).
 STATUS = ROOT / "data" / "status.json"
 
 # Measured Oct 2026: 93 of 95 monologues went up in the evening slot; there marker-less monologues scored >= 0.81
@@ -113,6 +113,11 @@ def evening(published):
     return (t.hour * 60 + t.minute - (22 * 60 + 30)) % (24 * 60) < 150
 
 
+def monologue_ids(videos):
+    """The videos in the main list, as a stable set: candidates and metadata edits do not count as additions."""
+    return sorted(v["id"] for v in videos if v["status"] == "monologue")
+
+
 def classify(video_id, title, description, duration, overrides, p_monologue=None, published=""):
     """Return "monologue", "candidate" (needs a human look) or None."""
     if video_id in overrides["exclude"]:
@@ -160,14 +165,15 @@ def main():
             out.append({"id": v["id"], "title": sn["title"], "published": sn["publishedAt"], "duration": duration, "status": status})
     out.sort(key=lambda v: v["published"], reverse=True)
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    # "List last changed" only moves when the list itself moves; a metadata refresh alone does not count.
-    previous = json.loads(DATA.read_text()) if DATA.exists() else None
-    if previous != out:
+    # Only a monologue joining or leaving the list counts as a list change. A metadata refresh, a
+    # candidate waiting in "Needs review", or a reorder must not pretend a video was just added.
+    previous = json.loads(DATA.read_text()) if DATA.exists() else []
+    if monologue_ids(previous) != monologue_ids(out):
         LAST_CHANGED.write_text(now + "\n")
     changed = LAST_CHANGED.read_text().strip() if LAST_CHANGED.exists() else now
     DATA.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n")
     CLEF_CACHE.write_text(json.dumps(clef, indent=1, sort_keys=True) + "\n")
-    STATUS.write_text(json.dumps({"changed": changed, "updated": now}, indent=1) + "\n")
+    STATUS.write_text(json.dumps({"changed": changed, "checked": now}, indent=1) + "\n")
     print(f"{sum(v['status'] == 'monologue' for v in out)} monologues, {sum(v['status'] == 'candidate' for v in out)} candidates")
 
 

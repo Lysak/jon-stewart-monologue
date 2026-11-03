@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-from update import classify, seconds  # noqa: E402
+from update import classify, monologue_ids, seconds  # noqa: E402
 
 NONE = {"include": [], "exclude": []}
 
@@ -52,6 +52,18 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(seconds("PT20M28S"), 1228)
         self.assertEqual(seconds("PT1H2M"), 3720)
         self.assertEqual(seconds("PT45S"), 45)
+
+
+class MonologueIdsTest(unittest.TestCase):
+    def test_candidates_and_metadata_do_not_count(self):
+        videos = [
+            {"id": "a", "status": "monologue", "title": "Old title", "duration": 1200},
+            {"id": "b", "status": "candidate", "title": "Waiting for review", "duration": 1300},
+            {"id": "c", "status": "monologue", "title": "New title", "duration": 1250},
+        ]
+        self.assertEqual(monologue_ids(videos), ["a", "c"])
+        # A title or duration refresh is still the same list.
+        self.assertEqual(monologue_ids(videos), monologue_ids([{**videos[0], "title": "Renamed"}] + videos[1:]))
 
 
 if __name__ == "__main__":

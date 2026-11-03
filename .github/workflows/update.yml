@@ -33,8 +33,6 @@ jobs:
     permissions:
       contents: write
       issues: write
-    outputs:
-      changed: ${{ steps.compare.outputs.changed }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -55,15 +53,6 @@ jobs:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - name: Compare published list
-        id: compare
-        run: |
-          curl -fsS -o "$RUNNER_TEMP/published-videos.json" -H 'Cache-Control: no-cache' https://lysak.github.io/jon-stewart-monologue/data/videos.json
-          if cmp -s data/videos.json "$RUNNER_TEMP/published-videos.json"; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
       - name: Save state to the data branch
         run: |
           state="$RUNNER_TEMP/state"
@@ -102,9 +91,11 @@ jobs:
         with:
           path: .
 
+  # Deploy every run, including hourly scheduled ones: `data/status.json` carries the last check
+  # time, and the page can only show it once that file is published. The data branch still only
+  # receives a commit when videos.json, clef.json or last-changed.txt actually differ.
   deploy:
     needs: [runner, update]
-    if: needs.update.outputs.changed == 'true' || github.event_name != 'schedule'
     runs-on: ${{ needs.runner.outputs.label }}
     permissions:
       pages: write
