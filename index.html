@@ -39,7 +39,7 @@
     font-variant-numeric: tabular-nums;
   }
   a { color: inherit; text-decoration: none; }
-  a, button, summary { cursor: pointer; }
+  a, button { cursor: pointer; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
 
   header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 16px; padding: 40px 0 8px; }
@@ -116,10 +116,6 @@
   #jump { position: fixed; z-index: 1; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); width: 44px; padding: 0; background: var(--bg); display: grid; place-items: center; }
   #jump.down svg { transform: rotate(180deg); }
 
-  details { margin: 48px 0 0; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
-  summary { min-height: 44px; display: flex; align-items: center; }
-  details code { font-size: .875rem; }
-
   footer { margin: 48px 0 0; padding: 16px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: .9375rem; }
   footer p { margin: 0 0 4px; }
   footer p:last-child { min-height: 44px; padding-right: 60px; } /* keep the final lines clear of #jump */
@@ -140,11 +136,6 @@
 <main>
   <p id="summary" aria-live="polite">Loading monologues…</p>
   <div id="list"></div>
-  <details id="review" hidden>
-    <summary id="review-summary">Needs review</summary>
-    <p>No "TDS Welcome" chapter, but it might still be a monologue. Add its id to <a href="https://github.com/Lysak/jon-stewart-monologue/blob/main/data/overrides.json" target="_blank" rel="noopener"><code>data/overrides.json</code></a> under <code>include</code> or <code>exclude</code>.</p>
-    <ol id="candidates"></ol>
-  </details>
 </main>
 <footer>
   <p>Jon Stewart's Monday openers from <a href="https://www.youtube.com/@TheDailyShow" target="_blank" rel="noopener">The Daily Show on YouTube</a>. The list refreshes hourly.</p>
@@ -172,13 +163,13 @@ const out = { target: "_blank", rel: "noopener" };
 // Every upload ends with the channel name; it is noise in a list that is all one show.
 const name = title => title.replace(/\s*\|\s*The Daily Show\s*$/i, "");
 
-function row(v, showId) {
+function row(v) {
   // mqdefault is a true 16:9 frame at 320x180: sharp at 2x for an 11rem column, ~15 KB, lazy below the fold.
   const img = el("img", { src: `https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`, alt: "", width: 320, height: 180, loading: "lazy", decoding: "async" });
   return el("li", {}, el("a", { className: "row", href: watch(v.id), ...out }, img,
     el("span", {},
       el("span", { className: "title", textContent: name(v.title) }),
-      el("span", { className: "meta" }, el("time", { dateTime: v.published, textContent: day.format(new Date(v.published)) }), ` · ${fmt(v.duration)}`, showId ? ` · ${v.id}` : ""),
+      el("span", { className: "meta" }, el("time", { dateTime: v.published, textContent: day.format(new Date(v.published)) }), ` · ${fmt(v.duration)}`),
     ),
   ));
 }
@@ -198,7 +189,6 @@ function latest(v) {
 
 function render(all) {
   const mono = all.filter(v => v.status === "monologue");
-  const cand = all.filter(v => v.status === "candidate");
   if (!mono.length) {
     $("summary").textContent = "No monologues yet. The list fills in after the first hourly update.";
   } else {
@@ -224,9 +214,6 @@ function render(all) {
     document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
     markMonth();
   }
-  $("review").hidden = !cand.length;
-  $("review-summary").textContent = `Needs review (${cand.length})`;
-  $("candidates").replaceChildren(...cand.map(v => row(v, true)));
 }
 
 // Highlight, in the margin index, the month whose rows are at the top of the screen.

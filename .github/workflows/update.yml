@@ -70,12 +70,14 @@ jobs:
             git -C "$state" -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit --quiet -m "Update videos"
             git -C "$state" push --quiet origin data
           fi
-      # One open issue while videos wait in "Needs review"; it closes itself once overrides settle them.
-      # ponytail: a candidate that appears while the issue is open is not added to it; it shows on the page.
+      # Candidates never reach the public page. One open issue is the review queue; it closes once
+      # overrides settle every candidate. A candidate that appears while the issue is open waits for
+      # the next issue cycle (ponytail), but it is never shown on the site.
       - name: Flag videos that need review
         env:
           GH_TOKEN: ${{ github.token }}
           OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.repository }}
         run: |
           list=$(jq -r '.[] | select(.status == "candidate") | "- [\(.title)](https://www.youtube.com/watch?v=\(.id)) `\(.id)`"' data/videos.json)
           open=$(gh issue list --label needs-review --state open --json number --jq '.[].number')
@@ -83,8 +85,8 @@ jobs:
             for n in $open; do gh issue close "$n" --comment "All settled."; done
           elif [ -z "$open" ]; then
             gh label create needs-review --color d93f0b 2>/dev/null || true
-            printf '@%s these videos have no "TDS Welcome" chapter and Clef is unsure:\n\n%s\n\nAdd each id to `data/overrides.json` under `include` or `exclude`. This issue closes on the next run once none are left.\n' \
-              "$OWNER" "$list" > body.md
+            printf '@%s these videos have no "TDS Welcome" chapter and Clef is unsure:\n\n%s\n\nTo settle each video, edit [data/overrides.json](https://github.com/%s/edit/main/data/overrides.json):\n\n- add the id to `include` if it is a monologue;\n- add the id to `exclude` if it is not.\n\nThe next run applies the change; this issue closes once no candidates are left.\n' \
+              "$OWNER" "$list" "$REPO" > body.md
             gh issue create --title "Needs review: $(echo "$list" | wc -l | tr -d ' ') videos" --label needs-review --body-file body.md
           fi
       - uses: actions/upload-pages-artifact@v5
